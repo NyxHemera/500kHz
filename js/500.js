@@ -6,7 +6,10 @@ var Colors = {
 };
 
 var orb;
-//var orb2;
+var deltaTime = 0;
+var newTime = new Date().getTime();
+var oldTime = new Date().getTime();
+var gameSpeed = 1/60;
 
 function init() {
 
@@ -127,6 +130,9 @@ class Orb {
 		this.growing = false; // True if growing, false if shrinking
 		this.atRest = true; // Is available for bouncing
 		this.bouncing = false; // True if growing, false if shrinking
+		this.bounceVel = 0;
+		this.maxVel = .0003;
+		this.acceleration = .00001;
 
 		this.currentScale = 1;
 		this.maxScale = 1.5;
@@ -149,31 +155,36 @@ class Orb {
 	}
 
 	animate() {
-		//this.currentScale = this.mesh.scale.x;
+		this.mesh.rotation.z += .003 * deltaTime;
+		this.mesh.rotation.x += .0005 * deltaTime;
+
 		this.atRest ? this.bounce() : this.grow();
 	}
 
 	grow() {
 		if(this.growing && this.currentScale < this.maxScale) {
 			this.atRest = false;
-			this.currentScale += .05;
+			this.currentScale += .005 * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
 		}else if(!this.growing && this.currentScale > 1){
-			this.currentScale -= .05;
+			this.currentScale -= .005 * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
-			this.atRest = Math.abs(1 - this.currentScale) < .05;
+			this.atRest = Math.abs(1 - this.currentScale) < .005;
 		}
 	}
 
 	bounce() {
 		if(this.bouncing && this.currentScale <= 1.2) {
-			//console.log('1');
-			this.currentScale += .003;
+			// Use velocity and acceleration to make a smooth transition
+			this.bounceVel < this.maxVel ? this.bounceVel += this.acceleration : this.bounceVel = this.maxVel;
+			this.currentScale += this.bounceVel * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
 			this.bouncing = this.currentScale <= 1.2;
 		}else if(!this.bouncing && this.currentScale >= .8) {
-			//console.log('0');
-			this.currentScale -= .003;
+			// Use velocity and acceleration to make a smooth transition
+			this.bounceVel > -this.maxVel ? this.bounceVel -= this.acceleration : this.bounceVel = -this.maxVel;
+
+			this.currentScale += this.bounceVel * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
 			this.bouncing = this.currentScale <= .8;
 		}
@@ -188,8 +199,9 @@ class Orb {
 
 function loop() {
 
-	orb.mesh.rotation.z += .05;
-	orb.mesh.rotation.x += .01;
+	newTime = new Date().getTime();
+	deltaTime = newTime-oldTime;
+	oldTime = newTime;
 
 	orb.animate();
 
