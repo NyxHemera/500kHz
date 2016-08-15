@@ -1,15 +1,17 @@
 window.addEventListener('load', init, false);
 
 var Colors = {
-	orb: 0xF03A3A,
-	black: 0x000000,
+	orb: 0xF12525,
+	beatOrb: 0x62D9FF,
 };
 
-var orb;
 var deltaTime = 0;
 var newTime = new Date().getTime();
 var oldTime = new Date().getTime();
-var gameSpeed = 1/60;
+var BPM = 60;
+
+var orb;
+var beatArr = [];
 
 function init() {
 
@@ -18,16 +20,11 @@ function init() {
 	createLights();
 
 	// Create Objects
-	orb = new Orb(50, 0xF12525);
+	orb = new Orb(50, Colors.orb);
 	orb.mesh.position.y = -110;
 	scene.add(orb.mesh);
 
-/*	orb2 = new Orb();
-	orb2.mesh.position.y = (-HEIGHT * getPPU(orb2))/2 - getActualWidth(orb2)/2;
-	console.log(getVisibleHeight(orb2) / 50);
-	console.log(getPPU(orb2));
-	console.log((-HEIGHT * getPPU(orb2))/2);
-	scene.add(orb2.mesh);*/
+	createBeat();
 
 	// Handle input
 	document.addEventListener('mousedown', handleMouseDown, false);
@@ -107,6 +104,19 @@ function createLights() {
 
 }
 
+function createBeat() {
+	var startingPosX = -1000;
+
+	for(var i=0; i<20; i++) {
+		beatArr.push(new Orb(10, Colors.beatOrb));
+
+		beatArr[i].mesh.position.y = -110;
+		beatArr[i].mesh.position.x = startingPosX + 100 * i;
+
+		scene.add(beatArr[i].mesh);
+	}
+}
+
 function getActualWidth(obj) {
 	return obj.mesh.geometry.parameters.width * obj.mesh.scale.x;
 }
@@ -174,20 +184,25 @@ class Orb {
 	}
 
 	bounce() {
-		if(this.bouncing && this.currentScale <= 1.2) {
+		if(this.bouncing && this.currentScale <= 1.1) {
 			// Use velocity and acceleration to make a smooth transition
 			this.bounceVel < this.maxVel ? this.bounceVel += this.acceleration : this.bounceVel = this.maxVel;
 			this.currentScale += this.bounceVel * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
-			this.bouncing = this.currentScale <= 1.2;
-		}else if(!this.bouncing && this.currentScale >= .8) {
+			this.bouncing = this.currentScale <= 1.1;
+		}else if(!this.bouncing && this.currentScale >= .9) {
 			// Use velocity and acceleration to make a smooth transition
 			this.bounceVel > -this.maxVel ? this.bounceVel -= this.acceleration : this.bounceVel = -this.maxVel;
 
 			this.currentScale += this.bounceVel * deltaTime;
 			this.mesh.scale.set(this.currentScale, this.currentScale, this.currentScale);
-			this.bouncing = this.currentScale <= .8;
+			this.bouncing = this.currentScale <= .9;
 		}
+	}
+
+	move() {
+		var dist = BPM * 100 / 60 / 1000; // BPM * distance between beats / seconds per minute / ms
+		this.mesh.position.x -= dist * deltaTime;
 	}
 
 	toggleGrowing() {
@@ -204,6 +219,19 @@ function loop() {
 	oldTime = newTime;
 
 	orb.animate();
+
+	for(var i=0; i<beatArr.length; i++) {
+		beatArr[i].animate();
+		beatArr[i].move();
+
+		if(beatArr[i].mesh.position.x < -1000) {
+			// Reposition
+			var beat = beatArr.splice(i, 1)[0];
+			beat.mesh.position.x = beatArr[beatArr.length - 1].mesh.position.x + 100;
+			beatArr.push(beat);
+			i--;
+		}
+	}
 
 	renderer.render(scene, camera);
 
