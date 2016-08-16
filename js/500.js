@@ -9,7 +9,7 @@ var deltaTime = 0;
 var newTime = new Date().getTime();
 var oldTime = new Date().getTime();
 var paused = false;
-var BPM = 90;
+var BPM = 120;
 var beatHandler;
 
 var orb;
@@ -27,6 +27,9 @@ function init() {
 	orb = new Orb(30, Colors.orb);
 	orb.mesh.position.y = -110;
 	scene.add(orb.mesh);
+
+	code = new CodeEnemy(Colors.beatOrb);
+	scene.add(code.mesh);
 
 	createBeat();
 
@@ -220,6 +223,49 @@ class Orb {
 	toggleGrowing() {
 		this.growing = !this.growing;
 		this.atRest = false;
+	}
+
+}
+
+class CodeEnemy {
+
+	constructor(color) {
+
+		this.codeArr = [[3,3,1],[1,3,1,1],[3,3,3]];
+
+		this.mesh = new THREE.Object3D();
+
+		this.holdGeom = new THREE.BoxGeometry(6,2,2);
+		this.tapGeom = new THREE.SphereGeometry(3,8,8);
+		this.mat = new THREE.MeshPhongMaterial({
+			color: color,
+			transparent: true,
+			opacity: .8,
+			shading: THREE.FlatShading,
+		});
+
+		for(var i=0; i<this.codeArr.length; i++) {
+			for(var j=0; j<this.codeArr[i].length; j++) {
+
+				if(this.codeArr[i][j] === 3) {
+					var m = new THREE.Mesh(this.holdGeom, this.mat);
+				}else if(this.codeArr[i][j] === 1) {
+					var m = new THREE.Mesh(this.tapGeom, this.mat);
+				}
+
+				m.position.y = i * 8;
+				m.position.x = (j * 6 + j * 3) - ((this.codeArr[i].length-1) * 9 )/2;
+
+				m.castShadow = true;
+				m.receiveShadow = true;
+
+				this.mesh.add(m);
+
+			}
+		}
+
+		//this.mesh.position.y = -110;
+
 	}
 
 }
