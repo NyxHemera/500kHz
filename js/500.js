@@ -14,6 +14,7 @@ var beatHandler;
 
 var orb;
 var beatArr = [];
+var enemies = [];
 
 function init() {
 
@@ -28,7 +29,8 @@ function init() {
 	orb.mesh.position.y = -110;
 	scene.add(orb.mesh);
 
-	code = new CodeEnemy("apple", Colors.beatOrb);
+	code = new CodeEnemy("apple", Colors.beatOrb, Colors.orb);
+	enemies.push(code);
 	scene.add(code.mesh);
 
 	createBeat();
@@ -229,29 +231,33 @@ class Orb {
 
 class CodeEnemy {
 
-	constructor(word, color) {
+	constructor(word, color, altColor) {
 
 		this.word = word;
 		this.codeArr = CodeEnemy.convertWordToMorse(word);
+		this.flatArr = CodeEnemy.flattenCode(this.codeArr);
 
 		this.mesh = new THREE.Object3D();
 
 		this.holdGeom = new THREE.BoxGeometry(6,2,2);
 		this.tapGeom = new THREE.SphereGeometry(3,8,8);
-		this.mat = new THREE.MeshPhongMaterial({
-			color: color,
-			transparent: true,
-			opacity: .8,
-			shading: THREE.FlatShading,
-		});
+		this.color = color;
+		this.altColor = altColor;
 
 		for(var i=0; i<this.codeArr.length; i++) {
 			for(var j=0; j<this.codeArr[i].length; j++) {
 
+				var mat = new THREE.MeshPhongMaterial({
+					color: color,
+					transparent: true,
+					opacity: .8,
+					shading: THREE.FlatShading,
+				});
+
 				if(this.codeArr[i][j] === 3) {
-					var m = new THREE.Mesh(this.holdGeom, this.mat);
+					var m = new THREE.Mesh(this.holdGeom, mat);
 				}else if(this.codeArr[i][j] === 1) {
-					var m = new THREE.Mesh(this.tapGeom, this.mat);
+					var m = new THREE.Mesh(this.tapGeom, mat);
 				}
 
 				m.position.y = -(i * 9) + ((this.codeArr.length-1) * 9)/2; // Position elements first, then center by half of total height
@@ -265,6 +271,47 @@ class CodeEnemy {
 			}
 		}
 
+	}
+
+	checkCodeForMatch(moveArr) {
+		for(var i=0; i<moveArr.length; i++) {
+			if(this.flatArr[i] && this.flatArr[i] === moveArr[i]) {
+				this.lightSymbol(i);
+			}else { // Too many moves
+				this.darkenAll();
+				break;
+			}
+		}
+
+		moveArr.length === 0 ? this.darkenAll() : ''; // No moves or just reset moveArr
+	}
+
+	update(dt) {
+		this.move(dt);
+	}
+
+	move(dt) {
+		this.mesh.position.y -= beatHandler.BPM / 60 / 1000 * 2 * dt;
+	}
+
+	lightSymbol(index) {
+		this.mesh.children[index].material.color.setHex(this.altColor);
+	}
+
+	darkenAll() {
+		for(var i=0; i<this.mesh.children.length; i++) {
+			this.mesh.children[i].material.color.setHex(this.color);
+		}
+	}
+
+	static flattenCode(code) {
+		var flatArr = [];
+		for(var i=0; i<code.length; i++) {
+			for(var j=0; j<code[i].length; j++) {
+				flatArr.push(code[i][j]);
+			}
+		}
+		return flatArr;
 	}
 
 	static convertWordToMorse(word) {
@@ -321,6 +368,10 @@ class BeatHandler {
 		this.tapLength = this.tapTimeEnded - this.tapTimeStarted;
 
 		this.isValidMove(this.tapLength, this.beatLength) ? this.logMove() : this.clearMoveArr();
+
+		for(var i=0; i<enemies.length; i++) {
+			enemies[i].checkCodeForMatch(this.moveArr);
+		}
 
 		this.tapTimeStarted = 0;
 		this.tapTimeEnded = 0;
@@ -410,6 +461,10 @@ function loop() {
 				beatArr.push(beat);
 				i--;
 			}
+		}
+
+		for(var i=0; i<enemies.length; i++) {
+			enemies[i].update(deltaTime);
 		}
 
 		renderer.render(scene, camera);
