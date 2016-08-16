@@ -8,6 +8,7 @@ var Colors = {
 var deltaTime = 0;
 var newTime = new Date().getTime();
 var oldTime = new Date().getTime();
+var paused = false;
 var BPM = 90;
 var beatHandler;
 
@@ -79,7 +80,8 @@ function createScene() {
 	container.appendChild(renderer.domElement);
 
 	window.addEventListener('resize', handleWindowResize, false);
-
+	window.addEventListener('blur', handleBlur, false);
+	window.addEventListener('focus', handleFocus, false);
 }
 
 var hemisphereLight, shadowLight;
@@ -319,32 +321,32 @@ class BeatHandler {
 }
 
 function loop() {
+	if(!paused) {
+		newTime = new Date().getTime();
+		deltaTime = newTime-oldTime;
+		oldTime = newTime;
 
-	newTime = new Date().getTime();
-	deltaTime = newTime-oldTime;
-	oldTime = newTime;
+		beatHandler.update(deltaTime);
 
-	beatHandler.update(deltaTime);
+		orb.animate();
 
-	orb.animate();
+		for(var i=0; i<beatArr.length; i++) {
+			beatArr[i].animate();
+			beatArr[i].move();
 
-	for(var i=0; i<beatArr.length; i++) {
-		beatArr[i].animate();
-		beatArr[i].move();
-
-		if(beatArr[i].mesh.position.x < -1000) {
-			// Reposition
-			var beat = beatArr.splice(i, 1)[0];
-			beat.mesh.position.x = beatArr[beatArr.length - 1].mesh.position.x + 100;
-			beatArr.push(beat);
-			i--;
+			if(beatArr[i].mesh.position.x < -1000) {
+				// Reposition
+				var beat = beatArr.splice(i, 1)[0];
+				beat.mesh.position.x = beatArr[beatArr.length - 1].mesh.position.x + 100;
+				beatArr.push(beat);
+				i--;
+			}
 		}
+
+		renderer.render(scene, camera);
 	}
 
-	renderer.render(scene, camera);
-
 	requestAnimationFrame(loop);
-
 }
 
 
@@ -367,4 +369,22 @@ function handleWindowResize() {
 	renderer.setSize(WIDTH, HEIGHT);
 	camera.aspect = WIDTH / HEIGHT;
 	camera.updateProjectionMatrix();
+}
+
+// Necessary to prevent beat desyncronization and animation distortion
+function handleFocus() {
+	newTime = new Date().getTime();
+	oldTime = newTime;
+	deltaTime = 0;
+
+	togglePaused();
+}
+
+function handleBlur() {
+
+	togglePaused();
+}
+
+function togglePaused() {
+	paused = !paused;
 }
