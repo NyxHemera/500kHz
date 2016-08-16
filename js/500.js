@@ -28,7 +28,7 @@ function init() {
 	orb.mesh.position.y = -110;
 	scene.add(orb.mesh);
 
-	code = new CodeEnemy(Colors.beatOrb);
+	code = new CodeEnemy("apple", Colors.beatOrb);
 	scene.add(code.mesh);
 
 	createBeat();
@@ -229,9 +229,10 @@ class Orb {
 
 class CodeEnemy {
 
-	constructor(color) {
+	constructor(word, color) {
 
-		this.codeArr = [[3,3,1],[1,3,1,1],[3,3,3]];
+		this.word = word;
+		this.codeArr = CodeEnemy.convertWordToMorse(word);
 
 		this.mesh = new THREE.Object3D();
 
@@ -253,8 +254,8 @@ class CodeEnemy {
 					var m = new THREE.Mesh(this.tapGeom, this.mat);
 				}
 
-				m.position.y = i * 8;
-				m.position.x = (j * 6 + j * 3) - ((this.codeArr[i].length-1) * 9 )/2;
+				m.position.y = -(i * 9) + ((this.codeArr.length-1) * 9)/2; // Position elements first, then center by half of total height
+				m.position.x = (j * 9) - ((this.codeArr[i].length-1) * 9 )/2; // 9 is width of geom + 3 distance between;
 
 				m.castShadow = true;
 				m.receiveShadow = true;
@@ -264,6 +265,28 @@ class CodeEnemy {
 			}
 		}
 
+	}
+
+	static convertWordToMorse(word) {
+		var wordArr = word.toLowerCase().split('');
+		var codeArr = [];
+
+		for(var i=0; i<wordArr.length; i++) {
+			codeArr.push(this.convertLetterToMorse(wordArr[i]));
+		}
+		return codeArr;
+	}
+
+	static convertLetterToMorse(letter) {
+		var code = {
+			a: [1,3], b: [3,1,1,1], c: [3,1,3,1], d: [3,1,1], e: [1],
+			f: [1,1,3,1], g: [3,3,1], h: [1,1,1,1], i: [1,1], j: [1,3,3,3],
+			k: [3,1,3], l: [1,3,1,1], m: [3,3], n: [3,1], o: [3,3,3],
+			p: [1,3,3,1], q: [3,3,1,3], r: [1,3,1], s: [1,1,1], t: [3],
+			u: [1,1,3], v: [1,1,1,3], w: [1,3,3], x: [3,1,1,3],
+			y: [3,1,3,3], z: [3,3,1,1]
+		};
+		return code[letter];
 	}
 
 }
