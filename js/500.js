@@ -8,7 +8,8 @@ var Colors = {
 var deltaTime = 0;
 var newTime = new Date().getTime();
 var oldTime = new Date().getTime();
-var BPM = 60;
+var BPM = 90;
+var beatHandler;
 
 var orb;
 var beatArr = [];
@@ -19,8 +20,10 @@ function init() {
 	createScene();
 	createLights();
 
+	beatHandler = new BeatHandler(BPM);
+
 	// Create Objects
-	orb = new Orb(50, Colors.orb);
+	orb = new Orb(30, Colors.orb);
 	orb.mesh.position.y = -110;
 	scene.add(orb.mesh);
 
@@ -117,6 +120,13 @@ function createBeat() {
 	}
 }
 
+function clearBeat() {
+	for(var i=0; i<beatArr.length; i++) {
+		scene.remove(beatArr[i].mesh);
+	}
+	beatArr = [];
+}
+
 function getActualWidth(obj) {
 	return obj.mesh.geometry.parameters.width * obj.mesh.scale.x;
 }
@@ -201,7 +211,7 @@ class Orb {
 	}
 
 	move() {
-		var dist = BPM * 100 / 60 / 1000; // BPM * distance between beats / seconds per minute / ms
+		var dist = beatHandler.BPM * 100 / 60 / 1000; // BPM * distance between beats / seconds per minute / ms
 		this.mesh.position.x -= dist * deltaTime;
 	}
 
@@ -212,11 +222,109 @@ class Orb {
 
 }
 
+class BeatHandler {
+
+	constructor(BPM) {
+		this.BPM = BPM
+		this.timeSinceLastBeat = 0;
+		this.beatLength = 60 / BPM * 1000; // In ms
+
+		this.tapping = false;
+		this.tapTimeStarted = 0;
+		this.tapLength = 0;
+		this.tapTimeEnded = 0;
+		this.holding = false;
+
+		this.moveArr = [];
+	}
+
+	startTap() {
+		this.tapTimeStarted = new Date().getTime();
+		if(this.isValidTap(this.tapTimeStarted)) {
+			this.tapping = true;
+		}
+
+	}
+
+	endTap() {
+		this.tapTimeEnded = new Date().getTime();
+
+		this.tapLength = this.tapTimeEnded - this.tapTimeStarted;
+
+		this.isValidMove(this.tapLength, this.beatLength) ? this.logMove() : this.clearMoveArr();
+
+		this.tapTimeStarted = 0;
+		this.tapTimeEnded = 0;
+		this.tapping = false;
+		console.log(this.moveArr);
+	}
+
+	// Checks if click is close enough to the beat
+	isValidTap() {
+		var timeDiff = Math.min(this.timeSinceLastBeat, this.beatLength - this.timeSinceLastBeat);
+		return Math.abs(timeDiff) < 250;
+	}
+
+	// Checks if move is a valid tap or hold
+	isValidMove(length, beatLength) {
+		if(!this.tapping) { // If original mousedown wasn't valid, this will return false
+			return false;
+		}
+
+		if(length <= 125) {
+			return true;
+		}else if(length > beatLength*2.5 && length < beatLength*3.5 && this.isValidTap()) { // Hold must end between the 2nd and 4th beat, and be close enough to the third beat
+			return true;
+		}else {
+			return false;
+		}
+	}
+
+	// 1 - Tapping
+	// 3 - Holding
+	logMove() {
+		// Stop or Hold
+		if(this.tapLength <= 125) {
+			this.moveArr.push(1);
+		}else {
+			this.moveArr.push(3);
+		}
+	}
+
+	clearMoveArr() {
+		this.moveArr = [];
+		this.lastMoveLogged = false;
+	}
+
+	update(dt) {
+		this.timeSinceLastBeat += dt;
+
+		// Only run when the beat hits
+		if(this.timeSinceLastBeat >= this.beatLength) {
+			this.timeSinceLastBeat %= this.beatLength;
+		}
+	}
+
+	setBPM(newBPM) {
+		this.BPM = newBPM;
+		this.beatLength = 60 / this.BPM * 1000;
+		clearBeat();
+		createBeat();
+		clearInterval(this.beatPrinter);
+		this.beatPrinter = setInterval(function() {
+			console.log("Beat");
+		}, this.beatLength);
+	}
+
+}
+
 function loop() {
 
 	newTime = new Date().getTime();
 	deltaTime = newTime-oldTime;
 	oldTime = newTime;
+
+	beatHandler.update(deltaTime);
 
 	orb.animate();
 
@@ -244,13 +352,13 @@ function loop() {
 
 // Event handlers:
 function handleMouseDown() {
-	console.log("MouseDown");
 	orb.toggleGrowing();
+	beatHandler.startTap();
 }
 
 function handleMouseUp() {
-	console.log("MouseUp");
 	orb.toggleGrowing();
+	beatHandler.endTap();
 }
 
 function handleWindowResize() {
