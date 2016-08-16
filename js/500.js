@@ -264,8 +264,6 @@ class CodeEnemy {
 			}
 		}
 
-		//this.mesh.position.y = -110;
-
 	}
 
 }
@@ -310,7 +308,9 @@ class BeatHandler {
 	// Checks if click is close enough to the beat
 	isValidTap() {
 		var timeDiff = Math.min(this.timeSinceLastBeat, this.beatLength - this.timeSinceLastBeat);
-		return Math.abs(timeDiff) < 250;
+		// console.log("timediff - " + timeDiff);
+		// console.log("margin - " + this.beatLength*.20);
+		return Math.abs(timeDiff) < this.beatLength*.20; // At 120BPM you have a 200ms margin
 	}
 
 	// Checks if move is a valid tap or hold
@@ -321,7 +321,7 @@ class BeatHandler {
 
 		if(length <= 125) {
 			return true;
-		}else if(length > beatLength*2.5 && length < beatLength*3.5 && this.isValidTap()) { // Hold must end between the 2nd and 4th beat, and be close enough to the third beat
+		}else if(length > beatLength*.5 && length < beatLength*1.5 && this.isValidTap()) { // Hold must be within the margins of the first beat, and be close enough to it.
 			return true;
 		}else {
 			return false;
@@ -332,7 +332,7 @@ class BeatHandler {
 	// 3 - Holding
 	logMove() {
 		// Stop or Hold
-		if(this.tapLength <= 125) {
+		if(this.tapLength <= 125) { // A tap is only recognized as shorter than 125ms
 			this.moveArr.push(1);
 		}else {
 			this.moveArr.push(3);
